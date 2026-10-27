@@ -30,8 +30,6 @@ DEPTH_SCATTER = 7.0
 RANDOM_SEED = 1
 # 碎片之間的縫隙；調大縫隙更明顯，建議只使用很小的數值。
 GAP = 0.006
-# 攝影機正交視野大小；調大可看到更大的範圍，調小可讓圖片佔滿畫面。
-CAMERA_ORTHO_SCALE = 8.8
 
 # =========================
 # 基本設定
@@ -136,6 +134,42 @@ def clip_polygon(poly, a, b, c, eps=1e-9):
             result.append(q)
     return result
 
+
+def point_inside_convex_polygon(point, poly, eps=1e-9):
+    """判斷點是否在凸多邊形內，兼容順時針與逆時針頂點順序。"""
+    signs = []
+    for i, p in enumerate(poly):
+        q = poly[(i + 1) % len(poly)]
+        cross = (q[0] - p[0]) * (point[1] - p[1]) - (q[1] - p[1]) * (point[0] - p[0])
+        if abs(cross) > eps:
+            signs.append(cross > 0)
+    return not signs or all(sign == signs[0] for sign in signs)
+
+
+def keep_point_inside(point, center, poly):
+    """將越界的後表面頂點沿中心線拉回前表面外框內。"""
+    if point_inside_convex_polygon(point, poly):
+        return point
+
+    low, high = 0.0, 1.0
+    for _ in range(32):
+        middle = (low + high) * 0.5
+        candidate = (
+            center[0] + (point[0] - center[0]) * middle,
+            center[1] + (point[1] - center[1]) * middle,
+        )
+        if point_inside_convex_polygon(candidate, poly):
+            low = middle
+        else:
+            high = middle
+
+    # 留一點邊界餘量，避免浮點誤差讓後表面剛好穿出外框。
+    safe_scale = max(0.0, low - 1e-6)
+    return (
+        center[0] + (point[0] - center[0]) * safe_scale,
+        center[1] + (point[1] - center[1]) * safe_scale,
+    )
+
 aspect = image.size[1] / image.size[0]
 width = IMAGE_WIDTH
 height = width * aspect
@@ -233,7 +267,9 @@ for idx, poly in enumerate(cells):
         back_y = center_y + (y - center_y) * back_scale
         back_x += random.uniform(-BACK_WOBBLE, BACK_WOBBLE)
         back_y += random.uniform(-BACK_WOBBLE, BACK_WOBBLE)
-        back_points.append((back_x, back_y))
+        back_points.append(
+            keep_point_inside((back_x, back_y), (center_x, center_y), poly)
+        )
 
     verts = []
     # 前面頂點
@@ -288,35 +324,9 @@ for idx, poly in enumerate(cells):
     created.append(obj)
 
 # =========================
-# 攝影機與燈光
+# 場景與渲染設定
 # =========================
 scene = bpy.context.scene
-
-# 建立/重設攝影機
-cam_data = bpy.data.cameras.new("IllusionCamera")
-cam = bpy.data.objects.new("IllusionCamera", cam_data)
-collection.objects.link(cam)
-cam.location = (0, 0, max(width, height) * 2.5)
-cam.rotation_euler = (0, 0, 0)
-cam.data.type = "ORTHO"
-cam.data.ortho_scale = max(CAMERA_ORTHO_SCALE, width * 1.05)
-scene.camera = cam
-
-# 主燈
-light_data = bpy.data.lights.new("IllusionKeyLight", type="AREA")
-light = bpy.data.objects.new("IllusionKeyLight", light_data)
-collection.objects.link(light)
-light.location = (-width * 0.2, height * 0.35, max(width, height) * 1.5)
-light.data.energy = 1800
-light.data.shape = "DISK"
-light.data.size = max(width, height) * 0.8
-
-# 燈光朝向畫面中心
-direction = Vector((0, 0, 0)) - light.location
-light.rotation_euler = direction.to_track_quat("-Z", "Y").to_euler()
-
-# 世界背景
-scene.world.color = (0.08, 0.08, 0.08)
 
 # 渲染設定
 scene.render.resolution_x = 1200
