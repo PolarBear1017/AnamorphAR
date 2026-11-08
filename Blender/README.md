@@ -1,20 +1,15 @@
-# Blender 錯視碎片 PoC
+# Blender 錯視模型驗證
 
-## 使用方式
-1. 用 Blender 開啟 `split.blend`；場景已更新為去背版碎片。
-2. 在 Scripting 工作區開啟內嵌的 `alpha_background_aware_shards.py`，調整參數後按 Run Script 重新生成。
-3. 圖片預設使用 `resource/OIP-removebg-preview.png`。替換圖片後重新執行腳本並儲存場景。
-4. 生成後會選取碎片；需要送往 Unity 時，匯出 FBX 並啟用 Selected Objects 與 Apply Modifiers，另將 PNG 複製到 Unity。
+依實驗分類；Unity 遊戲專案仍位於 `../AnamorphAR_program/`。
 
-## 檔案
-- `alpha_background_aware_shards.py`：新版 Alpha 輪廓裁切與不規則後表面延伸程式；場景內嵌相同版本。
-- `split.blend`：新版 PoC 場景。
-- `resource/`：原始圖片。
-- `Backups/`：可選的本機備份資料夾，不納入 Git。
+| 資料夾 | 內容 | 開啟檔案 |
+| --- | --- | --- |
+| `01_Alpha_Shards_PoC/` | 原始去背圖片、不規則延伸碎片 | `split.blend` |
+| `02_Circular_Anamorphosis_PoC/` | 圓形地球、450 片透視錯視與早期球殼實驗 | `circular_earth_fragments.blend` |
+| `Backups/` | 本機備份與舊快取，不納入 Git | — |
 
-外部程式修改後，請在 Blender 重新載入文字，再執行並儲存，讓內嵌版本同步。
-此版仍保留原 PoC 的正交視角驗證方式；尚未加入透視補償、AR 或自動匯出 Unity。
+每個 PoC 都有自己的 README、生成腳本與 `resource/` 圖片，圓形版本的渲染圖位於 `previews/`。
 
-最新版本保留逐頂點厚度變化、背面收縮與隨機偏移，RANDOM_SEED = 10。
+查看最新圓形錯視：開啟 `02_Circular_Anamorphosis_PoC/circular_earth_fragments.blend`，數字鍵盤 0 進入相機視角，空白鍵播放。第 1 格拼回地球，第 45 格觀看散開效果。
 
-已知限制：目前生成的 Shard_002 有一處邊由四個面共用，尚未修整為流形網格。
+請先將場景儲存在對應 PoC 資料夾，再執行該資料夾內的腳本，以正確讀取相對的圖片路徑。
