@@ -7,3 +7,7 @@
 *.pfx
 *.keystore
 *.jks
+
+# Blender 本機備份
+Blender/Backups/
+*.blend[0-9]*
